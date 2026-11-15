@@ -72,6 +72,14 @@ int main(int argc, char *argv[])
             n_customers++;
     }
 
+    if (n_customers == 0) {
+        fprintf(stderr, "Erro: customer.txt esta vazio\n");
+        fclose(f);
+        free(available);
+        return 1;
+    }
+    rewind(f);
+
     maximum = malloc(n_customers * sizeof(int *));
     allocation = malloc(n_customers * sizeof(int *));
     need = malloc(n_customers * sizeof(int *));
@@ -86,6 +94,14 @@ int main(int argc, char *argv[])
         limpa_fim(linha);
         if (linha[0] == '\0')
             continue;
+
+        size_t tam = strlen(linha);
+        if (linha[0] == ',' || linha[tam - 1] == ',' || strstr(linha, ",,") != NULL) {
+            fprintf(stderr, "Erro: formato invalido em customer.txt: \"%s\"\n", linha);
+            fclose(f);
+            libera_tudo();
+            return 1;
+        }
 
         int j = 0;
         char *tok = strtok(linha, ",");
@@ -118,6 +134,13 @@ int main(int argc, char *argv[])
     }
     fclose(f);
 
+    printf("Available:");
+    for (int j = 0; j < n_resources; j++) printf(" %d", available[j]);
+    printf("\nMax:\n");
+    for (int c = 0; c < n_customers; c++) {
+        for (int j = 0; j < n_resources; j++) printf("%d ", maximum[c][j]);
+        printf("\n");
+    }
 
     libera_tudo();
     return 0;
