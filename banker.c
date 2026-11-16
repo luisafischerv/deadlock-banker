@@ -110,6 +110,22 @@ int libera(int c, int *rel)
     return 0;
 }
 
+/* Escreve os m numeros de v separados por espaco (sem espaco no fim) */
+void escreve_vetor(FILE *s, int *v)
+{
+    for (int j = 0; j < n_resources; j++) {
+        if (j > 0)
+            fprintf(s, " ");
+        fprintf(s, "%d", v[j]);
+    }
+}
+
+/* Comando "*": proxima parte */
+void imprime_estado(FILE *s)
+{
+    (void)s;
+}
+
 void libera_tudo(void)
 {
     for (int i = 0; i < n_customers; i++) {
@@ -227,19 +243,130 @@ int main(int argc, char *argv[])
         printf("\n");
     }
 
-    int r1[] = {0, 2, 1}, r2[] = {3, 0, 2}, r3[] = {2, 0, 0}, r4[] = {0, 0, 2};
-    int l1[] = {0, 1, 1}, r5[] = {2, 1, 1}, r6[] = {4, 0, 0}, r7[] = {1, 0, 2};
-    int r8[] = {0, 2, 0}, r9[] = {0, 1, 0};
-    printf("%d ", requisita(0, r1));
-    printf("%d ", requisita(2, r2));
-    printf("%d ", requisita(1, r3));
-    printf("%d ", requisita(4, r4));
-    printf("%d ", libera(0, l1));
-    printf("%d ", requisita(3, r5));
-    printf("%d ", requisita(4, r6));
-    printf("%d ", requisita(1, r7));
-    printf("%d ", requisita(0, r8));
-    printf("%d\n", requisita(2, r9));
+    f = fopen("commands.txt", "r");
+    if (f == NULL) {
+        fprintf(stderr, "Erro: nao foi possivel abrir commands.txt\n");
+        libera_tudo();
+        return 1;
+    }
+
+    /* 1a passada: so valida */
+    int num_linha = 0;
+    while (fgets(linha, sizeof linha, f) != NULL) {
+        num_linha++;
+        limpa_fim(linha);
+        if (linha[0] == '\0')
+            continue;
+
+        char *tok = strtok(linha, " ");
+        if (strcmp(tok, "*") == 0) {
+            if (strtok(NULL, " ") != NULL) {
+                fprintf(stderr, "Erro: formato invalido na linha %d de commands.txt\n", num_linha);
+                fclose(f);
+                libera_tudo();
+                return 1;
+            }
+        } else if (strcmp(tok, "RQ") == 0 || strcmp(tok, "RL") == 0) {
+            int c;
+            tok = strtok(NULL, " ");
+            if (tok == NULL || !converte(tok, &c) || c >= n_customers) {
+                fprintf(stderr, "Erro: cliente invalido na linha %d de commands.txt\n", num_linha);
+                fclose(f);
+                libera_tudo();
+                return 1;
+            }
+
+            int qtd = 0;
+            tok = strtok(NULL, " ");
+            while (tok != NULL) {
+                int v;
+                if (!converte(tok, &v)) {
+                    fprintf(stderr, "Erro: formato invalido na linha %d de commands.txt\n", num_linha);
+                    fclose(f);
+                    libera_tudo();
+                    return 1;
+                }
+                qtd++;
+                tok = strtok(NULL, " ");
+            }
+
+            if (qtd != n_resources) {
+                fprintf(stderr, "Erro: commands.txt tem %d recursos, mas foram passados %d\n", qtd, n_resources);
+                fclose(f);
+                libera_tudo();
+                return 1;
+            }
+        } else {
+            fprintf(stderr, "Erro: comando invalido \"%s\" na linha %d de commands.txt\n", tok, num_linha);
+            fclose(f);
+            libera_tudo();
+            return 1;
+        }
+    }
+
+    rewind(f);
+    FILE *saida = fopen("result.txt", "w");
+    if (saida == NULL) {
+        fprintf(stderr, "Erro: nao foi possivel criar result.txt\n");
+        fclose(f);
+        libera_tudo();
+        return 1;
+    }
+
+    /* 2a passada: executa (ja foi tudo validado) */
+    int vetor[n_resources];
+    while (fgets(linha, sizeof linha, f) != NULL) {
+        limpa_fim(linha);
+        if (linha[0] == '\0')
+            continue;
+
+        char *cmd = strtok(linha, " ");
+        if (strcmp(cmd, "*") == 0) {
+            imprime_estado(saida);
+            continue;
+        }
+
+        int c;
+        converte(strtok(NULL, " "), &c);
+        for (int j = 0; j < n_resources; j++)
+            converte(strtok(NULL, " "), &vetor[j]);
+
+        if (strcmp(cmd, "RQ") == 0) {
+            int r = requisita(c, vetor);
+            if (r == 0) {
+                fprintf(saida, "Allocate to customer %d the resources ", c);
+                escreve_vetor(saida, vetor);
+                fprintf(saida, "\n");
+            } else if (r == 1) {
+                fprintf(saida, "The customer %d request ", c);
+                escreve_vetor(saida, vetor);
+                fprintf(saida, " was denied because exceed its maximum allocation\n");
+            } else if (r == 2) {
+                fprintf(saida, "The resources ");
+                escreve_vetor(saida, available);
+                fprintf(saida, " are not enough to customer %d request ", c);
+                escreve_vetor(saida, vetor);
+                fprintf(saida, " \n");
+            } else {
+                fprintf(saida, "The customer %d request ", c);
+                escreve_vetor(saida, vetor);
+                fprintf(saida, " was denied because result in an unsafe state\n");
+            }
+        } else { /* RL */
+            if (libera(c, vetor) == 0) {
+                fprintf(saida, "Release from customer %d the resources ", c);
+                escreve_vetor(saida, vetor);
+                fprintf(saida, "\n");
+            } else {
+                fprintf(saida, "The customer %d released ", c);
+                escreve_vetor(saida, vetor);
+                fprintf(saida, " was denied because exceed its allocation\n");
+            }
+        }
+    }
+
+    fclose(f);
+    fclose(saida);
 
     libera_tudo();
     return 0;
