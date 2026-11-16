@@ -5,3 +5,8 @@ commands.txt
 result.txt
 esperado.txt
 *.bak
+entrega/
+prints/
+lfvm.tar
+*.docx
+banker_antes_dos_erros.c
