@@ -25,6 +25,91 @@ int converte(const char *s, int *saida)
     return 1;
 }
 
+int cabe(int *a, int *b)
+{
+    for (int j = 0; j < n_resources; j++)
+        if (a[j] > b[j])
+            return 0;
+    return 1;
+}
+
+/* Retorna 1 se o estado atual e seguro, 0 se inseguro */
+int estado_seguro(void)
+{
+    int *work = malloc(n_resources * sizeof(int));
+    int *finish = malloc(n_customers * sizeof(int));
+
+    for (int j = 0; j < n_resources; j++)
+        work[j] = available[j];
+    for (int i = 0; i < n_customers; i++)
+        finish[i] = 0;
+
+    int achou;
+    do {
+        achou = 0;
+        for (int i = 0; i < n_customers; i++) {
+            if (finish[i] == 0 && cabe(need[i], work)) {
+                for (int j = 0; j < n_resources; j++)
+                    work[j] += allocation[i][j];
+                finish[i] = 1;
+                achou = 1;
+            }
+        }
+    } while (achou);
+
+    for (int i = 0; i < n_customers; i++) {
+        if (finish[i] == 0) {
+            free(work);
+            free(finish);
+            return 0;
+        }
+    }
+    free(work);
+    free(finish);
+    return 1;
+}
+
+/* Retorna 0 = alocou, 1 = excede o maximo, 2 = nao ha recursos, 3 = inseguro */
+int requisita(int c, int *req)
+{
+    if (!cabe(req, need[c]))
+        return 1;
+    if (!cabe(req, available))
+        return 2;
+
+    /* passo 3: fingir que alocou */
+    for (int j = 0; j < n_resources; j++) {
+        available[j] -= req[j];
+        allocation[c][j] += req[j];
+        need[c][j] -= req[j];
+    }
+
+    if (estado_seguro())
+        return 0;
+
+    /* inseguro: desfaz exatamente o que fez */
+    for (int j = 0; j < n_resources; j++) {
+        available[j] += req[j];
+        allocation[c][j] -= req[j];
+        need[c][j] += req[j];
+    }
+    return 3;
+}
+
+/* Retorna 0 = ok, 1 = erro (devolvendo mais do que tem) */
+int libera(int c, int *rel)
+{
+    if (!cabe(rel, allocation[c]))
+        return 1;
+
+    for (int j = 0; j < n_resources; j++) {
+        allocation[c][j] -= rel[j];
+        available[j] += rel[j];
+        need[c][j] += rel[j];
+    }
+    return 0;
+}
+
 void libera_tudo(void)
 {
     for (int i = 0; i < n_customers; i++) {
@@ -141,6 +226,20 @@ int main(int argc, char *argv[])
         for (int j = 0; j < n_resources; j++) printf("%d ", maximum[c][j]);
         printf("\n");
     }
+
+    int r1[] = {0, 2, 1}, r2[] = {3, 0, 2}, r3[] = {2, 0, 0}, r4[] = {0, 0, 2};
+    int l1[] = {0, 1, 1}, r5[] = {2, 1, 1}, r6[] = {4, 0, 0}, r7[] = {1, 0, 2};
+    int r8[] = {0, 2, 0}, r9[] = {0, 1, 0};
+    printf("%d ", requisita(0, r1));
+    printf("%d ", requisita(2, r2));
+    printf("%d ", requisita(1, r3));
+    printf("%d ", requisita(4, r4));
+    printf("%d ", libera(0, l1));
+    printf("%d ", requisita(3, r5));
+    printf("%d ", requisita(4, r6));
+    printf("%d ", requisita(1, r7));
+    printf("%d ", requisita(0, r8));
+    printf("%d\n", requisita(2, r9));
 
     libera_tudo();
     return 0;
