@@ -120,10 +120,33 @@ void escreve_vetor(FILE *s, int *v)
     }
 }
 
-/* Comando "*": proxima parte */
+/* Monta o texto de um vetor no buffer: "7 5 3 " (cada numero seguido de espaco) */
+void vetor_texto(char *buf, size_t tam, int *v)
+{
+    buf[0] = '\0';
+    size_t usado = 0;
+    for (int j = 0; j < n_resources && usado < tam; j++)
+        usado += snprintf(buf + usado, tam - usado, "%d ", v[j]);
+}
+
+/* Comando "*": imprime a tabela MAXIMUM | ALLOCATION | NEED e o AVAILABLE */
 void imprime_estado(FILE *s)
 {
-    (void)s;
+    char bufMax[256], bufAlloc[256], bufNeed[256];
+
+    fprintf(s, "%-10s|   %-12s|   %s\n", "MAXIMUM", "ALLOCATION", "NEED");
+
+    for (int i = 0; i < n_customers; i++) {
+        vetor_texto(bufMax, sizeof bufMax, maximum[i]);
+        vetor_texto(bufAlloc, sizeof bufAlloc, allocation[i]);
+        vetor_texto(bufNeed, sizeof bufNeed, need[i]);
+        fprintf(s, "%-10s|   %-12s|   %s\n", bufMax, bufAlloc, bufNeed);
+    }
+
+    fprintf(s, "AVAILABLE ");
+    for (int j = 0; j < n_resources; j++)
+        fprintf(s, "%d ", available[j]);
+    fprintf(s, "\n");
 }
 
 void libera_tudo(void)
@@ -234,14 +257,6 @@ int main(int argc, char *argv[])
         i++;
     }
     fclose(f);
-
-    printf("Available:");
-    for (int j = 0; j < n_resources; j++) printf(" %d", available[j]);
-    printf("\nMax:\n");
-    for (int c = 0; c < n_customers; c++) {
-        for (int j = 0; j < n_resources; j++) printf("%d ", maximum[c][j]);
-        printf("\n");
-    }
 
     f = fopen("commands.txt", "r");
     if (f == NULL) {
