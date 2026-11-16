@@ -7,7 +7,6 @@ Implementação do Algoritmo do Banqueiro (Silberschatz, *Operating System Conce
 
 - `banker.c` – código-fonte: leitura das entradas, algoritmo de segurança, requisição (RQ), liberação (RL) e impressão do estado (`*`).
 - `Makefile` – compila o programa e limpa os arquivos gerados.
-- `tests/` – arquivos de entrada para testar os casos de erro.
 - `evidencias.log` – registro do terminal durante o desenvolvimento (`script -a`).
 
 ## Como compilar
@@ -53,14 +52,3 @@ O programa mostra uma mensagem e sai com código 1 quando:
 Todo o `commands.txt` é validado antes de qualquer comando ser executado.
 
 Um `RL` que devolve mais do que o cliente tem não encerra o programa: o pedido é negado com uma mensagem no `result.txt` e os demais comandos continuam.
-
-## Testes
-
-Para rodar um caso de erro, troque o `commands.txt` por um arquivo de `tests/`:
-
-```
-cp commands.txt commands.bak
-cp tests/cmd_cliente.txt commands.txt
-./banker 10 5 7; echo $?
-cp commands.bak commands.txt
-```
